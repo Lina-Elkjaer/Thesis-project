@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from spacy.lang.da.stop_words import STOP_WORDS
 
-def tf_idf(X_train_SFI, X_test_SFI):
+def tf_idf(X_train_SFI, X_test_SFI, **kwargs):
     
     #For removing numbers in notes.... Dont know if this should be applied or not....
     X_train_SFI['note'] = X_train_SFI['note'].str.replace('\d+', '')
@@ -13,7 +13,7 @@ def tf_idf(X_train_SFI, X_test_SFI):
     #FIT
     danish_stopwords = list(STOP_WORDS)
 
-    vectorizer = TfidfVectorizer(stop_words = danish_stopwords, min_df = 5, max_features=200)
+    vectorizer = TfidfVectorizer(stop_words = danish_stopwords, **kwargs)
 
     X_train_temp = vectorizer.fit_transform(X_train_SFI['note'])
     

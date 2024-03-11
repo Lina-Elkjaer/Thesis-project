@@ -65,6 +65,7 @@ def preparing_specs(embeddings, predictor_dict, prediction_times, outcome_df, em
                 fallback=np.nan, 
                 aggregation_fn=mean,
                 feature_base_name=key,
+                prefix="pred",
             )
         
         elif "text" in key:
