@@ -4,7 +4,6 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 #from pandas import DataFrame
 
-#OPtuna 
 
 def data_split(df_outcome:pd.DataFrame, predictor_dict:dict, df_admissions:pd.DataFrame, test_size = 0.3):
     
@@ -12,9 +11,9 @@ def data_split(df_outcome:pd.DataFrame, predictor_dict:dict, df_admissions:pd.Da
     X_train, X_test, y_train, y_test = train_test_split(df_outcome['ID'], df_outcome['value'], test_size = test_size, random_state=42, stratify = df_outcome['value'])
     
     #Useful prints
-    print(f"Number of observations in trainingset:{sum(y_train)}")
+    print(f"Number of positive observations in trainingset:{sum(y_train)}")
     print(f"Percentage of positive class in trainingset: {sum(y_train)/len(y_train)*100}") #27.15% UTI
-    print(f"Number of observations in testset:{sum(y_test)}") #152
+    print(f"Number of positive observations in testset:{sum(y_test)}") #152
     print(f"Percentage of positive class in testset: {sum(y_test)/len(y_test)*100}") #27.14% UTI
 
     

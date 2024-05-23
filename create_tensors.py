@@ -7,6 +7,11 @@ warnings.filterwarnings("ignore", category=FutureWarning) # Doesnt really fix th
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 pd.options.mode.chained_assignment = None # warning about overwriting, but I do it in purpose
 
+
+
+
+
+
 def max_notes(X_df, df_admissions, look_back = 4):
     
     #Converting to date.time             
@@ -45,11 +50,16 @@ def max_notes(X_df, df_admissions, look_back = 4):
 
 
 
+
+
+
+
 def tensors(X_df, y_df, df_admissions, maximum_notes, predictor_dict, look_back = 4, look_ahead = 3):
     X_out_array = []
     y_out_array = []
     X_out_static = []
     X_out_dynamic = []
+    n_notes_out = []
     
     #Converting to date.time  
     df_admissions['date'] = pd.to_datetime(df_admissions['date'], format = "%Y-%m-%d %H:%M:%S")
@@ -73,9 +83,6 @@ def tensors(X_df, y_df, df_admissions, maximum_notes, predictor_dict, look_back 
 
         #Loop to split data into groups of 4 days 
         for i in range(len(df_admissions_sub['date'])):
-            #If uti_three_days_ago is positive, move on to next ID. Because we only want to exclude people who have had actually had a UTI, not people who will have it in two days.  
-            #if uti_three_days_ago == 1:
-                #continue
             if sum(uti_pr_ID_list) >= look_ahead:
                 continue
 
@@ -103,6 +110,24 @@ def tensors(X_df, y_df, df_admissions, maximum_notes, predictor_dict, look_back 
                 #subset containing 4 days of data for 1 patient 
                 subset = X_df_sub[X_df_sub['date'].isin(date_list)]
 
+                
+                
+                ######################   Initiating lists   ##########################
+                
+                #collecting text features
+                array_pr_ID = []
+                #collecting all the static variables
+                static_array_pr_ID = []
+                #collecting all the dynamic variables
+                dynamic_array_pr_ID = []
+
+
+                ##########################   PADDING    ###############################
+
+                #Collecting n_notes in each period for each patient
+                n_notes = len(subset) 
+                if n_notes < 1: 
+                    continue           #NB: new pr 22/04
                 #Creating padding for those who have too few notes
                 if len(subset) < maximum_notes:
                     padding_length = maximum_notes - len(subset)
@@ -110,28 +135,23 @@ def tensors(X_df, y_df, df_admissions, maximum_notes, predictor_dict, look_back 
                     for i in range(padding_length):
                         subset = subset.append(pd.Series(0, index=subset.columns), ignore_index=True)
                         
-                        ##Forsøg på at fikse deprecation warning, virker ikke!
-                        #new_row = pd.Series(0, index=subset.columns)
-                        #subset.loc[len(subset)] = new_row
-                        #subset = pd.concat([subset, new_row], ignore_index=True)
-
                 #Subset of only embeddings 
-                subset2 = subset.drop(['ID','date'], axis=1)
-                array_pr_ID = []
-                #collecting all the static variables
-                static_array_pr_ID = []
-                #collecting all the dynamic variables
-                dynamic_array_pr_ID = []
+                subset2 = subset.drop(['ID','date'], axis=1) 
 
+
+                ##########################   STATIC   ################################
                 for key, df in predictor_dict.items():
                     if "static" in key:
                         ID_sub = df[df['ID'] == ID]
                         static_array_pr_ID.append(ID_sub['value'].item())
 
 
+
+                ##########################   DYNAMIC   ################################
+
                 date_list2 = []
 
-                #For dynamic dfs find the mean of the lookback period
+                #For dynamic dfs just find the mean of the lookback period for now, should be corrected later
                 for key, df in predictor_dict.items():
                     if "dynamic" in key:
                         ID_sub = df[df['ID'] == ID]
@@ -143,12 +163,12 @@ def tensors(X_df, y_df, df_admissions, maximum_notes, predictor_dict, look_back 
                         mean = ID_sub2['value'].mean()
                         
 
-                        #If there is no score during the lookback period, take the latest score
+                        #If there is no score during the lookback period, take the latest score. This is already implemented in preprocessing now.
                         if math.isnan(mean):
                             previous_scores = ID_sub[ID_sub['date'] < df_pred_days.iloc[0,0]]
                             #print(f'Previous scores: {previous_scores}')
                             if previous_scores.empty:
-                                mean = ID_sub['value'].iloc[0] #if there is no score before or in the period, take the first score they have
+                                mean = ID_sub['value'].iloc[0] #if there is no score before or in the period, take the first score they have. 
                             else: 
                                 latest_date = max(previous_scores['date'])
                                 latest_score = ID_sub.loc[ID_sub['date'] == latest_date, 'value'].iloc[0]
@@ -175,6 +195,7 @@ def tensors(X_df, y_df, df_admissions, maximum_notes, predictor_dict, look_back 
 
                         X_out_static.append(static_array_pr_ID)
                         X_out_dynamic.append(dynamic_array_pr_ID)
+                        n_notes_out.append(n_notes)
 
 
     X_out_static_tensor = torch.Tensor(X_out_static)
@@ -182,12 +203,14 @@ def tensors(X_df, y_df, df_admissions, maximum_notes, predictor_dict, look_back 
 
     X_out_structured_tensor = torch.hstack((X_out_static_tensor, X_out_dynamic_tensor))
 
+    n_notes_out_tensor = torch.LongTensor(n_notes_out) #must be long tensor to work as index
+
     #Make the out_arrays tensors (possible now because of the padding)
-    X_out_tensor= torch.Tensor(X_out_array)
+    X_out_tensor = torch.Tensor(X_out_array)
     y_out_tensor = torch.Tensor(y_out_array)
 
 
-    return X_out_tensor, y_out_tensor, X_out_structured_tensor
+    return X_out_tensor, y_out_tensor, X_out_structured_tensor, n_notes_out_tensor
                              
 
 
