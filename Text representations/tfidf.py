@@ -5,7 +5,7 @@ from spacy.lang.da.stop_words import STOP_WORDS
 
 def tf_idf(X_train_SFI, X_test_SFI, **kwargs):
     
-    #For removing numbers in notes.... Dont know if this should be applied or not....
+    #For removing numbers in notes
     X_train_SFI['note'] = X_train_SFI['note'].str.replace('\d+', '')
     X_test_SFI['note'] = X_test_SFI['note'].str.replace('\d+', '')
 
